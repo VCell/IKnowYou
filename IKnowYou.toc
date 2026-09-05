@@ -1,0 +1,11 @@
+## Interface: 50503, 50504
+## Title: |cff33ff99IKnowYou|r
+## Notes: 通过对比全部成就完成情况，识别可能与关注角色属于同一战网账号的目标
+## Author: 戒虑牧
+## Version: 0.2.0
+## SavedVariables: IKnowYouDB
+## X-Category: Achievements
+
+Core.lua
+AchievementScan.lua
+Options.lua
