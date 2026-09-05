@@ -197,6 +197,8 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
                         "|cffff8800疑似发现同账号角色|r：%s 与关注角色 %s 相似度 %.1f%%",
                         targetDisplayName, watchName, similarity * 100))
                     if ns.RefreshOptionsPanel then ns.RefreshOptionsPanel() end
+                else
+                    Debug("%s 与关注角色 %s 相似度%.1f%%, 低于阈值", targetDisplayName, watchName, similarity * 100)
                 end
             end
         end
