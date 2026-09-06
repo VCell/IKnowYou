@@ -328,7 +328,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         end
 
     elseif event == "INSPECT_ACHIEVEMENT_READY" then
-        print("INSPECT_ACHIEVEMENT_READY", arg1)
+        Debug("INSPECT_ACHIEVEMENT_READY", arg1)
         if activeRequest and activeRequest.guid == arg1 then
             local req = activeRequest
             activeRequest = nil
