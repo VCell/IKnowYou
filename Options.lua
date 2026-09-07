@@ -47,12 +47,12 @@ local function CreateRow(parent)
 
     row.name = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.name:SetPoint("LEFT", COL_X.name, 0)
-    row.name:SetWidth(165)
+    row.name:SetWidth(120)
     row.name:SetJustifyH("LEFT")
 
     row.status = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     row.status:SetPoint("LEFT", COL_X.status, 0)
-    row.status:SetWidth(120)
+    row.status:SetWidth(165)
     row.status:SetJustifyH("LEFT")
 
     row.matched = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")

@@ -166,7 +166,7 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
     local threshold = IKnowYouDB.settings.similarityThreshold or 0.95
 
     for watchName, entry in pairs(IKnowYouDB.watchList) do
-        if entry.collected and entry.collectedDate and not entry.matchedGUIDs[guid] then
+        if watchName ~= targetDisplayName and entry.collected and entry.collectedDate and not entry.matchedGUIDs[guid] then
             -- 只取目标在该关注角色"采集日期"之前完成的成就
             local targetBefore = {}
             for achID, dateStr in pairs(targetAchievedWithDate) do
@@ -198,7 +198,8 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
                         targetDisplayName, watchName, similarity * 100))
                     if ns.RefreshOptionsPanel then ns.RefreshOptionsPanel() end
                 else
-                    Debug("%s 与关注角色 %s 相似度%.1f%%, 低于阈值", targetDisplayName, watchName, similarity * 100)
+                    Debug(string.format(
+                        "%s 与关注角色 %s 相似度%.1f%%, 低于阈值", targetDisplayName, watchName, similarity * 100))
                 end
             end
         end
@@ -229,6 +230,8 @@ local function HandleScanResult(req)
             Print(string.format("已采集关注角色成就数据：%s（共 %d 项已完成成就，采集日期 %s）",
                 req.fullName, TableLen(achieved), FormatDate(entry.collectedDate)))
             if ns.RefreshOptionsPanel then ns.RefreshOptionsPanel() end
+            --采集成功时重置checkedThisSession
+            checkedThisSession = {}
         end
 
     elseif req.mode == "match" then
@@ -253,7 +256,8 @@ local function TryCollectFromTarget(unit)
     if UnitIsUnit(unit, "player") then return end
     local fullName = GetFullName(unit)
     if not fullName then return end
-    if IKnowYouDB.watchList[fullName] then
+    --每个角色每天只采集一次
+    if IKnowYouDB.watchList[fullName] and IKnowYouDB.watchList[fullName].collectedDate ~= TodayDateString() then
         EnqueueRequest(unit, "collect", fullName)
     end
 end
@@ -301,7 +305,6 @@ end
 --============================================================
 -- 事件注册
 --============================================================
-
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
@@ -340,7 +343,7 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
 end)
 
 -- 设置命令
-SLASH_IKNOWYOU = "/iky"
+SLASH_IKNOWYOU1 = "/iky"
 SlashCmdList["IKNOWYOU"] = function(msg)
     local command, value = strsplit(" ", msg or "", 2)
     command = command and strlower(command) or ""
