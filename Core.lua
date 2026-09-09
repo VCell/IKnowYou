@@ -36,6 +36,8 @@ local requestQueue = {}
 local activeRequest = nil
 local debug = false
 
+local SCAN_TIMEOUT = 8 -- 秒。请求发出后这么久还没等到 INSPECT_ACHIEVEMENT_READY，就当作失败，放弃并处理下一个
+
 --============================================================
 -- 工具函数
 --============================================================
@@ -122,8 +124,14 @@ end
 
 local function ProcessQueue()
     Debug("ProcessQueue")
-    ClearAchievementComparisonUnit()
+    -- 注意：这里不能无条件调用 ClearAchievementComparisonUnit()。
+    -- ProcessQueue 在每次 EnqueueRequest 入队时都会被调用一次，如果这时已经有
+    -- activeRequest 在等待服务器返回，无条件清空会把这个还没返回的请求直接取消掉，
+    -- 导致它的 INSPECT_ACHIEVEMENT_READY 永远不会触发——这正是队列卡住的根因。
     if activeRequest then return end
+
+    ClearAchievementComparisonUnit()
+
     local req = table.remove(requestQueue, 1)
     if not req then return end
 
@@ -135,6 +143,15 @@ local function ProcessQueue()
 
     activeRequest = req
     SetAchievementComparisonUnit(req.unit)
+
+    -- 超时保护：如果一直等不到 INSPECT_ACHIEVEMENT_READY，放弃这次请求，继续处理队列
+    C_Timer.After(SCAN_TIMEOUT, function()
+        if activeRequest == req then
+            Debug("请求超时，放弃", req.fullName, req.mode)
+            activeRequest = nil
+            ProcessQueue()
+        end
+    end)
 end
 
 local function EnqueueRequest(unit, mode, fullName)
@@ -252,6 +269,7 @@ end
 
 local function TryCollectFromTarget(unit)
     Debug("TryCollectFromTarget", unit)
+    if not UnitIsPlayer(unit) then return end -- 只考虑玩家，排除NPC
     if not UnitIsFriend("player", unit) then return end
     if UnitIsUnit(unit, "player") then return end
     local fullName = GetFullName(unit)
@@ -268,6 +286,7 @@ end
 
 local function TryMatchUnit(unit)
     if InCombatLockdown() then return end -- 只在非战斗状态检测
+    if not UnitIsPlayer(unit) then return end -- 只考虑玩家，排除NPC
     if not UnitIsFriend("player", unit) then return end
     if UnitIsUnit(unit, "player") then return end
 
