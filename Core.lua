@@ -26,6 +26,7 @@ local DEFAULT_DB = {
         checkOnGroup = true,
         similarityThreshold = 0.95,
     },
+    suspectedMirrors = {}, -- debug模式下发现的"同名不同ID"疑似镜像成就 { {id1=, id2=, name=}, ... }
 }
 
 -- 本次登录内，"检测同账号"已经检查过的 GUID（不落盘，重新登录重置）
@@ -93,6 +94,7 @@ local function EnsureDB()
             IKnowYouDB.settings[k] = v
         end
     end
+    IKnowYouDB.suspectedMirrors = IKnowYouDB.suspectedMirrors or {}
 end
 
 --============================================================
@@ -216,6 +218,45 @@ local function PrintDiffList(title, achIDs)
     end
 end
 
+-- 在 onlyWatched / onlyTarget 里找"名字相同但ID不同"的成就（疑似阵营镜像对），
+-- 记录进 IKnowYouDB.suspectedMirrors，供之后手动核对、填进 FactionMirror.lua。
+-- 仅在 debug 模式下执行。
+local function AlreadyRecordedMirror(id1, id2)
+    for _, rec in ipairs(IKnowYouDB.suspectedMirrors) do
+        if (rec.id1 == id1 and rec.id2 == id2) or (rec.id1 == id2 and rec.id2 == id1) then
+            return true
+        end
+    end
+    return false
+end
+
+local function RecordSuspectedMirrors(onlyWatched, onlyTarget)
+    if #onlyWatched == 0 or #onlyTarget == 0 then return end
+
+    -- 先把 onlyTarget 的名字缓存出来，避免 O(n*m) 次重复调用 GetAchievementInfo
+    local targetNames = {}
+    for _, id2 in ipairs(onlyTarget) do
+        targetNames[id2] = GetAchievementName(id2)
+    end
+
+    local newCount = 0
+    for _, id1 in ipairs(onlyWatched) do
+        local name1 = GetAchievementName(id1)
+        for id2, name2 in pairs(targetNames) do
+            if name1 == name2 and not AlreadyRecordedMirror(id1, id2) then
+                table.insert(IKnowYouDB.suspectedMirrors, { id1 = id1, id2 = id2, name = name1 })
+                newCount = newCount + 1
+            end
+        end
+    end
+
+    if newCount > 0 then
+        Print(string.format(
+            "发现 %d 个疑似镜像成就（同名不同ID），已记录到 IKnowYouDB.suspectedMirrors，可核对后填入 FactionMirror.lua",
+            newCount))
+    end
+end
+
 local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDisplayName)
     local threshold = IKnowYouDB.settings.similarityThreshold or 0.95
 
@@ -264,6 +305,7 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
                         targetDisplayName, watchName, a, b))
                     PrintDiffList(watchName .. " 有但 " .. targetDisplayName .. " 没有（采集日期前）", onlyWatched)
                     PrintDiffList(targetDisplayName .. " 有但 " .. watchName .. " 没有", onlyTarget)
+                    RecordSuspectedMirrors(onlyWatched, onlyTarget)
                 end
             end
         end
