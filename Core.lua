@@ -230,32 +230,32 @@ local function AlreadyRecordedMirror(id1, id2)
     return false
 end
 
-local function RecordSuspectedMirrors(onlyWatched, onlyTarget)
-    if #onlyWatched == 0 or #onlyTarget == 0 then return end
+-- local function RecordSuspectedMirrors(onlyWatched, onlyTarget)
+--     if #onlyWatched == 0 or #onlyTarget == 0 then return end
 
-    -- 先把 onlyTarget 的名字缓存出来，避免 O(n*m) 次重复调用 GetAchievementInfo
-    local targetNames = {}
-    for _, id2 in ipairs(onlyTarget) do
-        targetNames[id2] = GetAchievementName(id2)
-    end
+--     -- 先把 onlyTarget 的名字缓存出来，避免 O(n*m) 次重复调用 GetAchievementInfo
+--     local targetNames = {}
+--     for _, id2 in ipairs(onlyTarget) do
+--         targetNames[id2] = GetAchievementName(id2)
+--     end
 
-    local newCount = 0
-    for _, id1 in ipairs(onlyWatched) do
-        local name1 = GetAchievementName(id1)
-        for id2, name2 in pairs(targetNames) do
-            if name1 == name2 and not AlreadyRecordedMirror(id1, id2) then
-                table.insert(IKnowYouDB.suspectedMirrors, { id1 = id1, id2 = id2, name = name1 })
-                newCount = newCount + 1
-            end
-        end
-    end
+--     local newCount = 0
+--     for _, id1 in ipairs(onlyWatched) do
+--         local name1 = GetAchievementName(id1)
+--         for id2, name2 in pairs(targetNames) do
+--             if name1 == name2 and not AlreadyRecordedMirror(id1, id2) then
+--                 table.insert(IKnowYouDB.suspectedMirrors, { id1 = id1, id2 = id2, name = name1 })
+--                 newCount = newCount + 1
+--             end
+--         end
+--     end
 
-    if newCount > 0 then
-        Print(string.format(
-            "发现 %d 个疑似镜像成就（同名不同ID），已记录到 IKnowYouDB.suspectedMirrors，可核对后填入 FactionMirror.lua",
-            newCount))
-    end
-end
+--     if newCount > 0 then
+--         Print(string.format(
+--             "发现 %d 个疑似镜像成就（同名不同ID），已记录到 IKnowYouDB.suspectedMirrors，可核对后填入 FactionMirror.lua",
+--             newCount))
+--     end
+-- end
 
 local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDisplayName)
     local threshold = IKnowYouDB.settings.similarityThreshold or 0.95
@@ -305,7 +305,6 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
                         targetDisplayName, watchName, a, b))
                     PrintDiffList(watchName .. " 有但 " .. targetDisplayName .. " 没有（采集日期前）", onlyWatched)
                     PrintDiffList(targetDisplayName .. " 有但 " .. watchName .. " 没有", onlyTarget)
-                    RecordSuspectedMirrors(onlyWatched, onlyTarget)
                 end
             end
         end
