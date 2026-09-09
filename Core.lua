@@ -179,6 +179,27 @@ local function GetAchievementName(achID)
 end
 ns.GetAchievementName = GetAchievementName
 
+-- 阵营镜像成就归一化：把 IKnowYou_FactionAchievementMirror 里配对的两个ID
+-- 映射到同一个 canonical ID（取较小的那个），采集/比对时统一走这层映射，
+-- 这样"完成A即视为完成B"就不会被计入差异(b)了。
+local canonicalMap
+local function BuildCanonicalMap()
+    canonicalMap = {}
+    local mirror = IKnowYou_FactionAchievementMirror or {}
+    for a, h in pairs(mirror) do
+        local canon = math.min(a, h)
+        canonicalMap[a] = canon
+        canonicalMap[h] = canon
+    end
+end
+
+local function CanonicalAchievementID(achID)
+    if not canonicalMap then
+        BuildCanonicalMap()
+    end
+    return canonicalMap[achID] or achID
+end
+
 -- 把差异成就名字打印出来，方便排查（比如阵营专属成就造成的干扰）
 -- 默认只在开了 /iky debug 时打印，避免刷屏；每边最多打印 MAX_PRINT 条
 local MAX_DIFF_PRINT = 30
@@ -262,7 +283,7 @@ local function HandleScanResult(req)
         for _, achID in ipairs(allIDs) do
             local completed = GetAchievementComparisonInfo(achID)
             if completed then
-                achieved[achID] = true
+                achieved[CanonicalAchievementID(achID)] = true
             end
         end
         local entry = IKnowYouDB.watchList[req.fullName]
@@ -282,7 +303,12 @@ local function HandleScanResult(req)
         for _, achID in ipairs(allIDs) do
             local completed, month, day, year = GetAchievementComparisonInfo(achID)
             if completed and year then
-                targetData[achID] = string.format("%04d%02d%02d", year + 2000, month, day)
+                local canon = CanonicalAchievementID(achID)
+                local dateStr = string.format("%04d%02d%02d", year + 2000, month, day)
+                -- 镜像的两个ID可能都命中（极少数换过阵营的情况），取较早的完成日期
+                if not targetData[canon] or dateStr < targetData[canon] then
+                    targetData[canon] = dateStr
+                end
             end
         end
         CompareAgainstWatchList(targetData, req.guid, req.fullName)

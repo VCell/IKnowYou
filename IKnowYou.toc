@@ -6,6 +6,7 @@
 ## SavedVariables: IKnowYouDB
 ## X-Category: Achievements
 
+FactionMirror.lua
 Core.lua
 AchievementScan.lua
 Options.lua
