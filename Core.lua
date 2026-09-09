@@ -173,11 +173,27 @@ local function EnqueueRequest(unit, mode, fullName)
     ProcessQueue()
 end
 
---============================================================
--- 相似度比对
--- a = 双方都完成的成就数, b = 只有一方完成的成就数
--- 相似度 = (a - b) / a
---============================================================
+local function GetAchievementName(achID)
+    local _, name = GetAchievementInfo(achID)
+    return name or ("未知成就#" .. tostring(achID))
+end
+ns.GetAchievementName = GetAchievementName
+
+-- 把差异成就名字打印出来，方便排查（比如阵营专属成就造成的干扰）
+-- 默认只在开了 /iky debug 时打印，避免刷屏；每边最多打印 MAX_PRINT 条
+local MAX_DIFF_PRINT = 30
+
+local function PrintDiffList(title, achIDs)
+    if #achIDs == 0 then return end
+    Print(string.format("  %s（%d项）：", title, #achIDs))
+    for i, achID in ipairs(achIDs) do
+        if i > MAX_DIFF_PRINT then
+            Print(string.format("    ……还有 %d 项未显示", #achIDs - MAX_DIFF_PRINT))
+            break
+        end
+        Print(string.format("    - [%d] %s", achID, GetAchievementName(achID)))
+    end
+end
 
 local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDisplayName)
     local threshold = IKnowYouDB.settings.similarityThreshold or 0.95
@@ -193,16 +209,19 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
             end
 
             local a, b = 0, 0
+            local onlyWatched, onlyTarget = {}, {}
             for achID in pairs(entry.achievements) do
                 if targetBefore[achID] then
                     a = a + 1
                 else
                     b = b + 1
+                    onlyWatched[#onlyWatched + 1] = achID
                 end
             end
             for achID in pairs(targetBefore) do
                 if not entry.achievements[achID] then
                     b = b + 1
+                    onlyTarget[#onlyTarget + 1] = achID
                 end
             end
 
@@ -217,6 +236,13 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
                 else
                     Debug(string.format(
                         "%s 与关注角色 %s 相似度%.1f%%, 低于阈值", targetDisplayName, watchName, similarity * 100))
+                end
+
+                if debug then
+                    Print(string.format("[差异明细] %s vs 关注角色 %s（a=%d, b=%d）",
+                        targetDisplayName, watchName, a, b))
+                    PrintDiffList(watchName .. " 有但 " .. targetDisplayName .. " 没有（采集日期前）", onlyWatched)
+                    PrintDiffList(targetDisplayName .. " 有但 " .. watchName .. " 没有", onlyTarget)
                 end
             end
         end
