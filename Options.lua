@@ -5,6 +5,19 @@ local rows = {}
 local ROW_HEIGHT = 22
 local COL_X = { name = 16, status = 190, matched = 320, delete = 500 }
 
+StaticPopupDialogs["IKNOWYOU_CONFIRM_DELETE"] = {
+    text = "确定要删除关注角色 %s 吗？\n（采集的数据和已匹配的同账号记录会一并清除）",
+    button1 = "删除",
+    button2 = "取消",
+    OnAccept = function(self, data)
+        ns.RemoveWatch(data)
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
 local function CreateCheckbox(parent, label, x, y, get, set)
     local cb = CreateFrame("CheckButton", nil, parent, "InterfaceOptionsCheckButtonTemplate")
     cb:SetPoint("TOPLEFT", x, y)
@@ -61,6 +74,25 @@ local function CreateRow(parent)
     row.matched:SetJustifyH("LEFT")
     row.matched:SetWordWrap(false)
 
+    -- FontString 本身不接收鼠标事件，盖一层透明 Frame 用来响应悬浮显示 tooltip
+    row.matchedHover = CreateFrame("Frame", nil, row)
+    row.matchedHover:SetAllPoints(row.matched)
+    row.matchedHover:EnableMouse(true)
+    row.matchedHover:SetScript("OnEnter", function(self)
+        local parentRow = self:GetParent()
+        local list = parentRow.matchedList
+        if not list or #list == 0 then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("检测到的同账号角色", 1, 1, 1)
+        for _, dispName in ipairs(list) do
+            GameTooltip:AddLine(dispName, 1, 0.82, 0)
+        end
+        GameTooltip:Show()
+    end)
+    row.matchedHover:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+
     row.delBtn = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
     row.delBtn:SetSize(50, 18)
     row.delBtn:SetPoint("LEFT", COL_X.delete, 0)
@@ -100,13 +132,15 @@ local function RefreshList()
         for _, dispName in pairs(entry.matchedGUIDs) do
             table.insert(matchedNames, dispName)
         end
+        table.sort(matchedNames)
         local matchedText = (#matchedNames > 0) and table.concat(matchedNames, ", ") or "-"
 
         row.name:SetText(name)
         row.status:SetText(statusText)
         row.matched:SetText(matchedText)
+        row.matchedList = matchedNames -- 供 matchedHover 的 tooltip 使用完整列表
         row.delBtn:SetScript("OnClick", function()
-            ns.RemoveWatch(name)
+            StaticPopup_Show("IKNOWYOU_CONFIRM_DELETE", name, nil, name)
         end)
 
         row:SetPoint("TOPLEFT", 0, -y)
@@ -209,5 +243,3 @@ eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:SetScript("OnEvent", function()
     BuildPanel()
 end)
-
-
