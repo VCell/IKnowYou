@@ -300,12 +300,12 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
                         "%s 与关注角色 %s 相似度%.1f%%, 低于阈值", targetDisplayName, watchName, similarity * 100))
                 end
 
-                if debug then
-                    Print(string.format("[差异明细] %s vs 关注角色 %s（a=%d, b=%d）",
-                        targetDisplayName, watchName, a, b))
-                    PrintDiffList(watchName .. " 有但 " .. targetDisplayName .. " 没有（采集日期前）", onlyWatched)
-                    PrintDiffList(targetDisplayName .. " 有但 " .. watchName .. " 没有", onlyTarget)
-                end
+                -- if debug then
+                --     Print(string.format("[差异明细] %s vs 关注角色 %s（a=%d, b=%d）",
+                --         targetDisplayName, watchName, a, b))
+                --     PrintDiffList(watchName .. " 有但 " .. targetDisplayName .. " 没有（采集日期前）", onlyWatched)
+                --     PrintDiffList(targetDisplayName .. " 有但 " .. watchName .. " 没有", onlyTarget)
+                -- end
             end
         end
     end
