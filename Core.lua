@@ -202,61 +202,6 @@ local function CanonicalAchievementID(achID)
     return canonicalMap[achID] or achID
 end
 
--- 把差异成就名字打印出来，方便排查（比如阵营专属成就造成的干扰）
--- 默认只在开了 /iky debug 时打印，避免刷屏；每边最多打印 MAX_PRINT 条
-local MAX_DIFF_PRINT = 30
-
-local function PrintDiffList(title, achIDs)
-    if #achIDs == 0 then return end
-    Print(string.format("  %s（%d项）：", title, #achIDs))
-    for i, achID in ipairs(achIDs) do
-        if i > MAX_DIFF_PRINT then
-            Print(string.format("    ……还有 %d 项未显示", #achIDs - MAX_DIFF_PRINT))
-            break
-        end
-        Print(string.format("    - [%d] %s", achID, GetAchievementName(achID)))
-    end
-end
-
--- 在 onlyWatched / onlyTarget 里找"名字相同但ID不同"的成就（疑似阵营镜像对），
--- 记录进 IKnowYouDB.suspectedMirrors，供之后手动核对、填进 FactionMirror.lua。
--- 仅在 debug 模式下执行。
-local function AlreadyRecordedMirror(id1, id2)
-    for _, rec in ipairs(IKnowYouDB.suspectedMirrors) do
-        if (rec.id1 == id1 and rec.id2 == id2) or (rec.id1 == id2 and rec.id2 == id1) then
-            return true
-        end
-    end
-    return false
-end
-
--- local function RecordSuspectedMirrors(onlyWatched, onlyTarget)
---     if #onlyWatched == 0 or #onlyTarget == 0 then return end
-
---     -- 先把 onlyTarget 的名字缓存出来，避免 O(n*m) 次重复调用 GetAchievementInfo
---     local targetNames = {}
---     for _, id2 in ipairs(onlyTarget) do
---         targetNames[id2] = GetAchievementName(id2)
---     end
-
---     local newCount = 0
---     for _, id1 in ipairs(onlyWatched) do
---         local name1 = GetAchievementName(id1)
---         for id2, name2 in pairs(targetNames) do
---             if name1 == name2 and not AlreadyRecordedMirror(id1, id2) then
---                 table.insert(IKnowYouDB.suspectedMirrors, { id1 = id1, id2 = id2, name = name1 })
---                 newCount = newCount + 1
---             end
---         end
---     end
-
---     if newCount > 0 then
---         Print(string.format(
---             "发现 %d 个疑似镜像成就（同名不同ID），已记录到 IKnowYouDB.suspectedMirrors，可核对后填入 FactionMirror.lua",
---             newCount))
---     end
--- end
-
 local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDisplayName)
     local threshold = IKnowYouDB.settings.similarityThreshold or 0.95
 
@@ -300,12 +245,6 @@ local function CompareAgainstWatchList(targetAchievedWithDate, guid, targetDispl
                         "%s 与关注角色 %s 相似度%.1f%%, 低于阈值", targetDisplayName, watchName, similarity * 100))
                 end
 
-                -- if debug then
-                --     Print(string.format("[差异明细] %s vs 关注角色 %s（a=%d, b=%d）",
-                --         targetDisplayName, watchName, a, b))
-                --     PrintDiffList(watchName .. " 有但 " .. targetDisplayName .. " 没有（采集日期前）", onlyWatched)
-                --     PrintDiffList(targetDisplayName .. " 有但 " .. watchName .. " 没有", onlyTarget)
-                -- end
             end
         end
     end
